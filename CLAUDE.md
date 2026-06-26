@@ -101,12 +101,15 @@ Located in `load-test/docs/`:
 
 Traffic analysis baseline from `docs/traffic-screnario.md` models a niche vertical community (benchmark: Polle — 120K users, 30K MAU, 12K DAU).
 
-### Load Test Profile
+### Performance Configuration
 
-`application-load-test.yml` settings:
-- HikariCP: `maximum-pool-size: 50`, `minimum-idle: 10`
-- JPA batch: `default_batch_fetch_size: 100`, `batch_size: 100`
+Performance settings in `application.yml` (shared across all profiles):
+- HikariCP: `maximum-pool-size: 50`, `minimum-idle: 10`, `connection-timeout: 30000`, `idle-timeout: 600000`, `max-lifetime: 1800000`, `leak-detection-threshold: 60000`
+- JPA batch: `default_batch_fetch_size: 100`, `batch_size: 100`, `order_inserts: true`, `order_updates: true`
+
+Load-test specific settings in `application-load-test.yml`:
 - LocalStack S3 with presigned URL substitution (internal/external URL routing)
+- Monitoring via `application-monitor.yml` (Prometheus metrics)
 
 ### Quick Troubleshooting
 

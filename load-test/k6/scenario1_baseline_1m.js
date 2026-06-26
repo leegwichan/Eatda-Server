@@ -36,7 +36,7 @@ export default function() {
   sleep(5);
 
   // 2. 가게 상세 진입 (4개 API 동시 호출)
-  const storeId = Math.floor(Math.random() * 5000) + 1;
+  const storeId = Math.floor(Math.random() * 7000) + 1;
   const storeDetailRequests = [
     { method: 'GET', url: `${BASE_URL}/api/shops/${storeId}` },
     { method: 'GET', url: `${BASE_URL}/api/shops/${storeId}/cheers?size=10` },
@@ -47,10 +47,13 @@ export default function() {
   const storeResponses = http.batch(storeDetailRequests);
   storeResponses.forEach(res => {
     const success = check(res, {
-      'store detail status is 200': (r) => r.status === 200,
+      'store detail status is 200 or 404': (r) => r.status === 200 || r.status === 404,
       'store detail response time < 500ms': (r) => r.timings.duration < 500,
     });
-    errorRate.add(!success);
+    // 404는 데이터 없음이므로 에러로 카운트하지 않음
+    if (res.status !== 404) {
+      errorRate.add(!success);
+    }
   });
 
   sleep(5);

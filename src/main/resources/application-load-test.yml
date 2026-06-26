@@ -8,13 +8,6 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:eatda}
     password: ${SPRING_DATASOURCE_PASSWORD:eatda123}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
-    hikari:
-      maximum-pool-size: 50
-      minimum-idle: 10
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      leak-detection-threshold: 60000
 
   cloud:
     aws:
@@ -30,11 +23,6 @@ spring:
     properties:
       hibernate:
         format_sql: false
-        default_batch_fetch_size: 100
-        jdbc:
-          batch_size: 100
-        order_inserts: true
-        order_updates: true
         use_sql_comments: false
     open-in-view: false
 
