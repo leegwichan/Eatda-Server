@@ -80,4 +80,10 @@
         </root>
     </springProfile>
 
+    <springProfile name="load-test">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE_JSON"/>
+        </root>
+    </springProfile>
+
 </configuration>
