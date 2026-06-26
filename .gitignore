@@ -52,3 +52,7 @@ out/
 
 ### claude code ###
 /.claude/settings.local.json
+
+### Load Test ###
+/scripts/load-test/results/
+*.hprof

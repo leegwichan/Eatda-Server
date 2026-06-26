@@ -1,0 +1,57 @@
+management:
+  # Prometheus 메트릭 엔드포인트 노출
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health,info,metrics,prometheus
+
+  endpoint:
+    health:
+      show-components: always
+      show-details: always
+      probes:
+        enabled: true
+    prometheus:
+      enabled: true
+    metrics:
+      enabled: true
+
+  info:
+    java:
+      enabled: true
+    os:
+      enabled: true
+    env:
+      enabled: true
+
+  # Prometheus 메트릭 설정
+  metrics:
+    tags:
+      application: ${spring.application.name:eatda-server}
+      environment: ${spring.profiles.active:default}
+    export:
+      prometheus:
+        enabled: true
+        step: 10s
+        descriptions: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+      slo:
+        http.server.requests: 10ms, 50ms, 100ms, 200ms, 500ms, 1s, 2s
+    enable:
+      jvm: true
+      process: true
+      system: true
+      tomcat: true
+      logback: true
+      hikaricp: true
+      jdbc: true
+
+server:
+  tomcat:
+    mbeanregistry:
+      enabled: true

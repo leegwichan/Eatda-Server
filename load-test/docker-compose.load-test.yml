@@ -1,0 +1,169 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: eatda-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: eatda
+      MYSQL_USER: eatda
+      MYSQL_PASSWORD: eatda123
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max-connections=1000
+      - --max-allowed-packet=256M
+    networks:
+      - eatda-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # LocalStack (S3 Mock)
+  localstack:
+    image: localstack/localstack:3.0.0
+    container_name: eatda-localstack
+    environment:
+      SERVICES: s3
+      DEBUG: 1
+      DATA_DIR: /tmp/localstack/data
+      AWS_DEFAULT_REGION: ap-northeast-2
+    ports:
+      - "4566:4566"
+    volumes:
+      - ./scripts/init-s3.sh:/etc/localstack/init/ready.d/init-s3.sh
+    networks:
+      - eatda-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # WAS (Spring Boot Application)
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: eatda-app
+    environment:
+      SPRING_PROFILES_ACTIVE: load-test,monitor
+      SPRING_APPLICATION_NAME: eatda-server
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/eatda?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+      SPRING_DATASOURCE_USERNAME: eatda
+      SPRING_DATASOURCE_PASSWORD: eatda123
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      JWT_SECRET_KEY: load-test-secret-key-for-jwt-token-generation-minimum-256-bits
+      OAUTH_CLIENT_ID: test-client-id
+      KAKAO_API_KEY: test-api-key
+      LOCALSTACK_EXTERNAL_URL: http://localhost:4566
+      LOCALSTACK_INTERNAL_URL: http://localstack:4566
+      LOCAL_DOCKER_ENABLED: true
+      JAVA_OPTS: >-
+        -Xms2g
+        -Xmx2.5g
+        -XX:+UseG1GC
+        -XX:MaxGCPauseMillis=200
+        -XX:+HeapDumpOnOutOfMemoryError
+        -XX:HeapDumpPath=/tmp/heap_dump.hprof
+        -XX:MaxMetaspaceSize=256m
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    networks:
+      - eatda-network
+    # AWS EC2 t3.medium 사양 기준 (2 vCPU, 4 GiB)
+    cpus: 2.0              # CPU 2 vCPU
+    mem_limit: 4g          # 메모리 4GB (t3.medium 사양)
+    mem_reservation: 3g    # 최소 메모리 3GB 보장
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: eatda-prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    networks:
+      - eatda-network
+    depends_on:
+      - app
+
+  # InfluxDB (K6 metrics storage)
+  influxdb:
+    image: influxdb:1.8
+    container_name: eatda-influxdb
+    environment:
+      INFLUXDB_DB: k6
+      INFLUXDB_HTTP_AUTH_ENABLED: "false"
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+    networks:
+      - eatda-network
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: eatda-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - eatda-network
+    depends_on:
+      - prometheus
+      - influxdb
+
+  # K6 Load Testing Tool
+  k6:
+    image: grafana/k6:latest
+    container_name: eatda-k6
+    volumes:
+      - ./k6:/scripts
+      - ./k6/results:/results
+    networks:
+      - eatda-network
+    profiles:
+      - load-test
+    depends_on:
+      - app
+
+networks:
+  eatda-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  localstack-data:
+  prometheus-data:
+  grafana-data:
+  influxdb-data:

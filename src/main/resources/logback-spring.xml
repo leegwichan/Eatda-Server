@@ -53,30 +53,18 @@
         </root>
     </springProfile>
 
-    <!-- dev 프로필: JSON 콘솔 출력과 기존 텍스트 롤링 형식 사용 -->
-    <springProfile name="dev">
-        <root level="INFO">
-            <appender-ref ref="CONSOLE_JSON"/>
-            <appender-ref ref="ROLLING_LOG_FILE"/>
-        </root>
-    </springProfile>
-
-    <!-- prod 프로필: JSON 콘솔 출력과 기존 텍스트 롤링 사용 -->
-    <springProfile name="prod">
-        <property name="LOG_NAME_PATTERN" value="${LOG_DIR}/eatda-%d{yyyy-MM-dd}.%i.log.gz"/>
-
-        <root level="INFO">
-            <appender-ref ref="CONSOLE_JSON"/>
-            <appender-ref ref="ROLLING_LOG_FILE"/>
-        </root>
-    </springProfile>
-
     <springProfile name="migration">
         <property name="LOG_NAME_PATTERN" value="${LOG_DIR}/eatda-%d{yyyy-MM-dd}.%i.log.gz"/>
 
         <root level="INFO">
             <appender-ref ref="CONSOLE_JSON"/>
             <appender-ref ref="ROLLING_LOG_FILE"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="load-test">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE_JSON"/>
         </root>
     </springProfile>
 
